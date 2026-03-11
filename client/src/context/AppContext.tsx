@@ -115,7 +115,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         await fetchFoodLogs(token);
         await fetchActivityLogs(token);
       })();
-    }
+    } 
   }, []);
 
   const value = {
