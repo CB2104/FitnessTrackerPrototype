@@ -204,7 +204,7 @@ const Onboarding = () => {
                 <Input
                   label="Height (cm) - Optional"
                   type="number"
-                  value={formData.height}
+                  value={formData.height ?? ""}
                   onChange={(v) => updateField("height", v)}
                   placeholder="Enter your height"
                   min={100}
