@@ -1,30 +1,29 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { getStoredToken, removeStoredToken } from "../utils/auth";
+const baseURL = import.meta.env.VITE_STRAPI_API_URL;
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_STRAPI_API_URL,
+if (!baseURL) {
+  throw new Error("VITE_STRAPI_API_URL is not defined. Check your .env file.");
+}
+
+const api = axios.create({ baseURL });
+
+api.interceptors.request.use((config) => {
+  const token = getStoredToken();
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
 });
-
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  },
-);
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+      removeStoredToken();
+      window.dispatchEvent(new Event("auth:unauthorized"));
     }
     return Promise.reject(error);
   },
