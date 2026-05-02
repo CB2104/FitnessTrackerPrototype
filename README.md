@@ -1,234 +1,162 @@
-<div align="center">
+# FitnessTrackerPrototype
 
-<img src="https://readme-typing-svg.herokuapp.com?font=Fira+Code&size=30&duration=3000&pause=1000&color=10B981&center=true&vCenter=true&width=600&lines=🏋️+Fitness+Tracker+AI;Track.+Snap.+Improve." alt="Typing SVG" />
-
-**An AI-powered fitness tracker that analyzes your food through photos and calculates your daily calorie intake — built with React, TypeScript, Strapi and Google Gemini.**
-
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-fitness--tracker--prototype.vercel.app-10B981?style=for-the-badge&logo=vercel&logoColor=white)](https://fitness-tracker-prototype.vercel.app)
-[![React](https://img.shields.io/badge/React_19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Strapi](https://img.shields.io/badge/Strapi_5-4945FF?style=for-the-badge&logo=strapi&logoColor=white)](https://strapi.io)
-[![Tailwind](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
-
-</div>
+A fullstack AI-powered fitness tracking web app that lets users log meals, track physical activity, and monitor daily calorie balance — with an image analysis feature that auto-identifies food and estimates calories using Google Gemini.
 
 ---
 
-## 📋 Table of Contents
+## 📌 Project Overview
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Tech Stack & Decisions](#-tech-stack--technical-decisions)
-- [Architecture](#-architecture)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [Data Models](#-data-models)
+FitnessTrackerPrototype is a production-style fullstack application with a React/TypeScript frontend and a Strapi v5 backend. Users register, complete an onboarding flow to set their fitness goals, and then track daily food intake and physical activities through a dashboard with calorie charts and progress indicators. The food logging flow includes an AI shortcut: users can upload a photo of their meal and let Gemini 2.5 Flash identify the food and estimate calories automatically.
+
+The project demonstrates real-world patterns — JWT auth, protected routes, global client state, per-user data scoping in a headless CMS, and third-party AI integration — rather than being a simple CRUD toy.
 
 ---
 
-## 🧠 Overview
+## 🧩 Problem
 
-Fitness Tracker AI is a fullstack web application that helps users monitor their daily nutrition and physical activity. The standout feature is **AI Food Snap** — users can photograph any meal and the app automatically identifies the food and estimates its caloric content using **Google Gemini 2.5 Flash**, a state-of-the-art multimodal LLM.
-
-The app handles authentication, personalized onboarding, daily calorie goals, activity logging, and visual progress tracking through a weekly chart — all in a clean, responsive UI with dark mode support.
+Most fitness tracker demos are either purely frontend (fake data, no persistence) or rely on naive per-component data fetching that causes redundant requests and stale UI state. There is also a gap between learning projects and production patterns around authentication flows — particularly onboarding gates, token persistence, and automatic session restoration on page reload.
 
 ---
 
-## ✨ Key Features
+## ✅ Solution
 
-- **🤖 AI Food Snap** — Upload a photo of your meal; Gemini analyzes it and auto-logs the food name and calories
-- **🔐 Auth System** — Register, login and persistent JWT sessions via Strapi Users & Permissions plugin
-- **📋 Onboarding Flow** — First-time users set their age, weight, height and fitness goal (lose / maintain / gain)
-- **📊 Dashboard** — Real-time summary of calories consumed vs. goal, calories burned, active minutes, BMI and a weekly progress chart
-- **🍽️ Food Log** — Manual food entry or AI-assisted snap, grouped by meal type (breakfast, lunch, dinner, snack)
-- **🏃 Activity Log** — Log workouts with duration and calories burned
-- **👤 Profile** — Update personal metrics and daily targets at any time
-- **🌙 Dark Mode** — Full dark/light theme support via React Context
-- **📱 Responsive** — Mobile-first layout with a bottom navigation bar on smaller screens
+The app separates concerns clearly across layers: Strapi owns authentication, data persistence, and the REST API surface; the React client owns routing, session management, and UI state via a single global context. Token-based auth is handled with an Axios interceptor that injects the Bearer token on every request and redirects to `/login` on 401. The onboarding gate is enforced at the app shell level before any route is rendered, ensuring new users cannot skip goal setup. The Gemini integration lives entirely on the backend as a custom Strapi service and controller, avoiding key exposure on the client.
 
 ---
 
-## 🛠️ Tech Stack & Technical Decisions
+## ⚡ Key Features
+
+- JWT authentication with automatic session restoration on page reload via `localStorage` token + `/api/users/me` fetch
+- Onboarding gate that collects age, weight, height, and fitness goal before granting access to the main app
+- Daily calorie dashboard with progress bars, net calorie calculation (intake minus burned), and a weekly calorie chart via Recharts
+- Food log with manual entry form and AI-assisted image analysis (upload a photo → Gemini returns food name + calories)
+- Activity log with duration and calorie tracking per workout
+- Profile page for updating fitness goals and daily calorie targets
+- Responsive layout with a sidebar on desktop and bottom navigation on mobile
+- Dark/light theme toggle via React context
+- Toast notifications for user-facing errors and confirmations
+
+---
+
+## 🛠 Tech Stack
 
 ### Frontend
 
-| Technology | Version | Why it was chosen |
-|---|---|---|
-| **React** | 19 | Component-based architecture for a dynamic, data-driven UI with multiple views and real-time state updates |
-| **TypeScript** | 5.9 | Strict typing across all data models (User, FoodEntry, ActivityEntry) prevents runtime errors and improves maintainability |
-| **Vite + SWC** | 7 | Extremely fast HMR during development and optimized production builds via SWC compiler (Rust-based, significantly faster than Babel) |
-| **Tailwind CSS** | v4 | Utility-first styling enables rapid UI iteration without leaving JSX; v4's new engine offers better performance and a simpler config |
-| **React Router v7** | 7 | Client-side routing with protected route logic baked into the component tree via `AppContext` guards |
-| **Axios** | 1.13 | Chosen over `fetch` for its interceptor API — request interceptor auto-attaches the JWT token; response interceptor globally handles 401 errors and redirects to login |
-| **Recharts** | 3 | Declarative chart library built on top of D3, used for the weekly calorie intake/burn bar chart |
-| **React Hot Toast** | 2.6 | Lightweight toast notification library for user feedback on async actions (add, delete, AI analysis) |
-| **Lucide React** | 0.563 | Consistent, tree-shakeable icon set that integrates cleanly with React |
+- **React 19 + TypeScript** — Component model with full type safety across API responses, form state, and context shape
+- **React Router v7** — Client-side routing with nested layout routes (`/`, `/food`, `/activity`, `/profile`)
+- **Tailwind CSS v4** — Utility-first styling integrated via the `@tailwindcss/vite` plugin; no separate config file required at v4
+- **Recharts** — Declarative chart library used for the weekly calorie bar chart on the dashboard
+- **Lucide React** — Icon set consistent with Tailwind's design language
+- **react-hot-toast** — Lightweight, non-blocking toast notification system
+
+### State & Data Management
+
+- **React Context + `useState`** — Global app state (user session, food logs, activity logs) is held in `AppContext` and distributed via a custom `useAppContext` hook. Chosen over TanStack Query or Redux because the data model is flat, mutations are simple, and cache invalidation is handled manually by updating context arrays on create/delete.
 
 ### Backend
 
-| Technology | Version | Why it was chosen |
-|---|---|---|
-| **Strapi** | 5 | Headless CMS that provides a production-ready REST API, admin panel, database ORM, user authentication plugin and file upload — all out of the box, drastically reducing backend boilerplate |
-| **Google Gemini 2.5 Flash** | `@google/generative-ai` | Multimodal LLM with vision capabilities; the Flash variant balances speed, cost and accuracy — ideal for real-time food image analysis returning structured JSON |
-| **SQLite (better-sqlite3)** | — | Lightweight embedded database suited for the prototype/demo stage; can be swapped for PostgreSQL/MySQL via Strapi's database config with zero code changes |
+- **Strapi v5** — Headless CMS chosen as the backend framework because it provides a production-grade auth system (`users-permissions` plugin with JWT), automatic REST API generation from content-type schemas, and an admin panel — eliminating the need to hand-roll controllers, middleware, and auth logic for a project of this scope.
+- **SQLite (better-sqlite3)** — Default Strapi database for local development; zero config, file-based, no external service required. The `database.ts` config also supports MySQL and PostgreSQL for production.
+- **Google Gemini 2.5 Flash (`@google/generative-ai`)** — Multimodal model used for food image analysis. The `gemini.ts` service reads the uploaded image from disk, encodes it as base64, and requests a structured JSON response with food name and calorie estimate.
+
+### Infrastructure & Tooling
+
+- **Vite 7 + `@vitejs/plugin-react-swc`** — Fast dev server and build tool using SWC for TypeScript/JSX compilation instead of Babel; measurably faster HMR on large component trees
+- **ESLint 9 with `typescript-eslint` + `eslint-plugin-react-hooks`** — Flat config format, enforces hook rules and TypeScript best practices
+- **Vercel** — Client deployment target (`vercel.json` present in `client/`)
 
 ---
 
-## 🏗️ Architecture
+## 🔍 Technical Decisions
+
+| Technology                        | Decision Rationale                                                                                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strapi v5                         | Provides JWT auth, user management, content-type REST APIs, and an admin panel out of the box — avoiding hand-rolling auth middleware and CRUD controllers for a prototype scope                        |
+| React Context over TanStack Query | The app has a small number of global entities (user, food logs, activity logs); using context with manual array updates avoids the overhead and learning curve of a server-state library for this scope |
+| Gemini 2.5 Flash                  | Multimodal capability with JSON mode (`responseMimeType: "application/json"`) makes food image analysis reliable and easy to parse without post-processing                                              |
+| SQLite for local dev              | Zero external dependencies; the Strapi `database.ts` config already supports Postgres/MySQL for production swap without code changes                                                                    |
+| Vite + SWC plugin                 | Significantly faster than `@vitejs/plugin-react` (Babel) for TypeScript projects; hot reload is near-instant even on large files                                                                        |
+
+---
+
+## 🏗 Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│                   CLIENT                     │
-│  React 19 + TypeScript + Vite               │
-│                                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │AppContext│  │  Pages   │  │   UI     │  │
-│  │(global   │  │Dashboard │  │Components│  │
-│  │ state)   │  │FoodLog   │  │Card      │  │
-│  │          │  │Activity  │  │Button    │  │
-│  │user      │  │Profile   │  │Input...  │  │
-│  │foodLogs  │  │Login     │  └──────────┘  │
-│  │actLogs   │  │Onboarding│               │
-│  └────┬─────┘  └──────────┘               │
-│       │  Axios (JWT interceptors)           │
-└───────┼─────────────────────────────────────┘
-        │ HTTP REST
-┌───────┼─────────────────────────────────────┐
-│       ▼          SERVER (Strapi 5)          │
-│  ┌──────────────────────────────────────┐   │
-│  │  REST API                            │   │
-│  │  /api/auth/local (login/register)    │   │
-│  │  /api/users/me                       │   │
-│  │  /api/food-logs                      │   │
-│  │  /api/activity-logs                  │   │
-│  │  /api/image-analysis  ─────────────┐ │   │
-│  └─────────────────────────────────── │ ┘   │
-│                                        │     │
-│  ┌──────────────────────────────────┐  │     │
-│  │  Strapi ORM → SQLite             │  │     │
-│  │  Users, FoodLogs, ActivityLogs   │  │     │
-│  └──────────────────────────────────┘  │     │
-└────────────────────────────────────────┼─────┘
-                                         │ Base64 image
-                              ┌──────────▼──────────┐
-                              │  Google Gemini API   │
-                              │  gemini-2.5-flash    │
-                              │  → { name, calories }│
-                              └──────────────────────┘
+React Client (Vite + TypeScript)
+  ├── AppContext (global state: user, foodLogs, activityLogs)
+  ├── ThemeContext (dark/light mode)
+  ├── Axios instance (base URL + JWT interceptor + 401 redirect)
+  └── Pages / Components
+        ↓ HTTP (REST)
+Strapi v5 (Node.js)
+  ├── users-permissions plugin  →  /api/auth/local, /api/users/me
+  ├── food-log content type     →  /api/food-logs (CRUD)
+  ├── activity-log content type →  /api/activity-logs (CRUD)
+  └── image-analysis custom API →  /api/image-analysis
+        ↓
+  Gemini 2.5 Flash (Google AI)   ←  base64 image + prompt
+        ↓
+  SQLite (local) / Postgres (prod)
 ```
 
-### Auth & Session Flow
+**Data flow:**
 
-```
-User opens app
-     │
-     ▼
-localStorage has token?
-     │
-  Yes├──► fetchUser(token) ──► Strapi /api/users/me
-  No └──► Show Login page
-               │
-        Login/Register ──► Strapi /api/auth/local
-               │
-        JWT saved to localStorage
-               │
-        user.age + weight + goal set?
-        Yes ──► Dashboard
-        No  ──► Onboarding
-```
+A typical food log create: the user fills the form in `FoodLog.tsx` → `handleSubmit` calls `api.post("/api/food-logs", { data: formData })` → the Axios interceptor injects the stored JWT → Strapi validates the token, associates the entry with the authenticated user via the `users_permissions_user` relation, and persists to SQLite → the response is appended directly to `allFoodLogs` in `AppContext`, re-rendering the dashboard and food list without a refetch.
 
-### AI Food Snap Flow
-
-```
-User clicks "AI Food Snap"
-     │
-     ▼
-File input triggers → image selected
-     │
-     ▼
-POST /api/image-analysis (multipart/form-data)
-     │
-     ▼
-Strapi controller reads temp file path
-     │
-     ▼
-Gemini 2.5 Flash analyzes image (base64)
-Returns: { "name": "Grilled Chicken", "calories": 320 }
-     │
-     ▼
-Controller auto-detects meal type by current hour
-(0-12 → breakfast | 12-16 → lunch | 16-18 → snack | else → dinner)
-     │
-     ▼
-POST /api/food-logs → entry saved to DB
-     │
-     ▼
-UI updates toast + food list in real time
-```
+For AI-assisted entry: the user uploads a photo in the food log form → the client `POST`s the image to `/api/image-analysis` → the Strapi controller saves the file, calls `analyzeImage()` in `gemini.ts` → Gemini returns `{ name, calories }` as JSON → the controller returns that to the client, which pre-fills the food entry form.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-FitnessTrackerPrototype/
-│
-├── client/                         # React frontend
+FitnessTrackerPrototype-main/
+├── client/                        # React + Vite frontend
 │   ├── src/
 │   │   ├── assets/
-│   │   │   ├── assets.ts           # Static data: icons, meal types, quick-add options
-│   │   │   └── mockApi.ts          # Mock data for development
+│   │   │   ├── assets.ts          # Static data: meal icons, motivational messages, quick-add lists
+│   │   │   └── mockApi.ts         # Offline mock data (used during development)
 │   │   ├── components/
-│   │   │   ├── ui/                 # Reusable primitives
-│   │   │   │   ├── Button.tsx
-│   │   │   │   ├── Card.tsx
-│   │   │   │   ├── Input.tsx
-│   │   │   │   ├── ProgressBar.tsx
-│   │   │   │   ├── Select.tsx
-│   │   │   │   ├── Slider.tsx
-│   │   │   │   └── Tooltip.tsx
-│   │   │   ├── BottomNav.tsx       # Mobile navigation bar
-│   │   │   ├── CaloriesChart.tsx   # Weekly Recharts bar chart
-│   │   │   ├── Loading.tsx         # Full-screen loading spinner
-│   │   │   └── Sidebar.tsx         # Desktop sidebar navigation
+│   │   │   ├── ui/                # Primitive UI components: Button, Card, Input, Select, Slider, ProgressBar, Tooltip
+│   │   │   ├── BottomNav.tsx      # Mobile navigation bar
+│   │   │   ├── CaloriesChart.tsx  # Recharts weekly calorie bar chart
+│   │   │   └── Sidebar.tsx        # Desktop navigation sidebar
 │   │   ├── configs/
-│   │   │   └── api.ts              # Axios instance + JWT + 401 interceptors
+│   │   │   └── api.ts             # Axios instance with JWT interceptor and 401 handler
 │   │   ├── context/
-│   │   │   ├── AppContext.tsx      # Global state: user, food logs, activity logs, auth
+│   │   │   ├── AppContext.tsx      # Global state: auth, food logs, activity logs
 │   │   │   └── ThemeContext.tsx    # Dark/light theme toggle
 │   │   ├── pages/
-│   │   │   ├── Dashboard.tsx       # Home: calories, BMI, chart, summary
-│   │   │   ├── FoodLog.tsx         # Manual + AI food entry and listing
-│   │   │   ├── ActivityLog.tsx     # Workout logging
-│   │   │   ├── Profile.tsx         # Edit personal metrics
-│   │   │   ├── Login.tsx           # Login & register form
-│   │   │   ├── Onboarding.tsx      # First-time user setup
-│   │   │   └── Layout.tsx          # Shared layout (Sidebar + Outlet)
-│   │   ├── types/
-│   │   │   └── index.ts            # All TypeScript interfaces and types
-│   │   ├── App.tsx                 # Route guards + route definitions
-│   │   └── main.tsx
-│   └── .env.template
+│   │   │   ├── Dashboard.tsx       # Today's calorie summary, progress bars, weekly chart
+│   │   │   ├── FoodLog.tsx         # Manual and AI-assisted meal entry, delete
+│   │   │   ├── ActivityLog.tsx     # Workout entry and delete
+│   │   │   ├── Profile.tsx         # Update user fitness profile
+│   │   │   ├── Onboarding.tsx      # First-time goal setup gate
+│   │   │   ├── Login.tsx           # Login / register form
+│   │   │   └── Layout.tsx          # Root layout with sidebar + bottom nav
+│   │   └── types/
+│   │       └── index.ts            # All shared TypeScript types and interfaces
+│   └── vercel.json                 # Vercel deployment config (rewrites for SPA routing)
 │
-└── server/                         # Strapi 5 backend
+└── server/                         # Strapi v5 backend
     ├── config/
-    │   ├── database.ts             # SQLite config
-    │   ├── server.ts               # Host + port
-    │   └── middlewares.ts          # CORS, security, body parser
-    └── src/
-        ├── api/
-        │   ├── food-log/           # CRUD: food entries (name, calories, mealType, user relation)
-        │   ├── activity-log/       # CRUD: activities (name, duration, calories, user relation)
-        │   └── image-analysis/
-        │       ├── controllers/    # Handles multipart file, calls Gemini service
-        │       ├── routes/         # POST /api/image-analysis
-        │       └── services/
-        │           └── gemini.ts   # Google Gemini 2.5 Flash integration
-        └── extensions/
-            └── users-permissions/  # Extended user schema (age, weight, height, goal, calorie targets)
+    │   ├── database.ts             # SQLite / MySQL / Postgres config based on env
+    │   ├── middlewares.ts          # CORS and other middleware config
+    │   └── plugins.ts              # Plugin configuration
+    ├── src/
+    │   ├── api/
+    │   │   ├── food-log/           # FoodLog collection type: schema, controller, route, service
+    │   │   ├── activity-log/       # ActivityLog collection type: schema, controller, route, service
+    │   │   └── image-analysis/     # Custom API: image upload + Gemini analysis
+    │   │       ├── controllers/image-analysis.ts
+    │   │       ├── routes/image-analysis.ts
+    │   │       └── services/gemini.ts   # Google Generative AI integration
+    │   └── extensions/
+    │       └── users-permissions/  # Extended User schema with fitness profile fields
+    └── types/generated/            # Auto-generated TypeScript types from Strapi content types
 ```
+
+The client uses a flat pages-and-components structure rather than feature-based folders, which is appropriate at this scale. The server follows Strapi's conventional `api/<content-type>/{controllers,routes,services,content-types}` layout, with one custom API module (`image-analysis`) that steps outside the generated pattern to integrate a third-party service.
 
 ---
 
@@ -236,153 +164,180 @@ FitnessTrackerPrototype/
 
 ### Prerequisites
 
-- Node.js `>= 20.x`
-- npm `>= 6.x`
-- A [Google Gemini API Key](https://aistudio.google.com/app/apikey) (free tier available)
+- Node.js `>=20.0.0 <=24.x.x`
+- npm `>=6.0.0`
+- A Google Gemini API key (for image analysis)
 
-### 1. Clone the repository
+### Clone the repository
 
 ```bash
-git clone https://github.com/CB2104/FitnessTrackerPrototype.git
+git clone https://github.com/CB2104/FitnessTrackerPrototype
 cd FitnessTrackerPrototype
 ```
 
-### 2. Setup the Server (Strapi)
+### Start the backend
 
 ```bash
 cd server
-npm install
 cp .env.example .env
-```
-
-Fill in your `.env` (see [Environment Variables](#-environment-variables) below), then:
-
-```bash
-npm run dev
-```
-
-Strapi will start at `http://localhost:1337`. On first run it will auto-generate the SQLite database.
-
-> **Important:** After first run, go to `http://localhost:1337/admin`, create your admin account and ensure the `food-logs`, `activity-logs` and `image-analysis` endpoints have the correct permissions set for authenticated users in **Settings → Users & Permissions → Roles → Authenticated**.
-
-### 3. Setup the Client (React)
-
-```bash
-cd ../client
+# Fill in APP_KEYS, JWT secrets, and GEMINI_API_KEY in .env
 npm install
-cp .env.template .env
-```
-
-Update `.env`:
-
-```env
-VITE_STRAPI_API_URL=http://localhost:1337
-```
-
-Then start the dev server:
-
-```bash
 npm run dev
 ```
 
-App will be available at `http://localhost:5173`.
+Strapi starts on `http://localhost:1337`. On first run it will auto-migrate the SQLite database. Visit `http://localhost:1337/admin` to create the admin user and configure content-type permissions (grant `find`, `findOne`, `create`, `delete` on `food-log` and `activity-log` to the Authenticated role).
+
+### Start the frontend
+
+```bash
+cd client
+cp .env.template .env
+# VITE_STRAPI_API_URL is already set to http://localhost:1337
+npm install
+npm run dev
+```
+
+The client starts on `http://localhost:5173`.
 
 ---
 
 ## 🔐 Environment Variables
 
-### Server (`server/.env`)
-
-| Variable | Description |
-|---|---|
-| `HOST` | Server host (default: `0.0.0.0`) |
-| `PORT` | Server port (default: `1337`) |
-| `APP_KEYS` | Comma-separated secret keys for Strapi sessions |
-| `API_TOKEN_SALT` | Salt for API token generation |
-| `ADMIN_JWT_SECRET` | Secret for admin panel JWT |
-| `JWT_SECRET` | Secret for user-facing JWT tokens (auth) |
-| `TRANSFER_TOKEN_SALT` | Salt for data transfer tokens |
-| `ENCRYPTION_KEY` | Key for encrypting sensitive data |
-| `GEMINI_API_KEY` | **Your Google Gemini API key** — required for AI food analysis |
-
 ### Client (`client/.env`)
 
-| Variable | Description |
-|---|---|
-| `VITE_STRAPI_API_URL` | Full URL of the Strapi backend (e.g. `http://localhost:1337`) |
+```env
+VITE_STRAPI_API_URL=http://localhost:1337
+```
+
+| Variable              | Description                                                | Required |
+| --------------------- | ---------------------------------------------------------- | -------- |
+| `VITE_STRAPI_API_URL` | Base URL of the Strapi backend, used by the Axios instance | ✅       |
+
+### Server (`server/.env`)
+
+```env
+HOST=0.0.0.0
+PORT=1337
+APP_KEYS=key1,key2
+API_TOKEN_SALT=your_salt
+ADMIN_JWT_SECRET=your_secret
+TRANSFER_TOKEN_SALT=your_salt
+JWT_SECRET=your_secret
+ENCRYPTION_KEY=your_key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+| Variable              | Description                                                   | Required |
+| --------------------- | ------------------------------------------------------------- | -------- |
+| `HOST`                | Server bind host                                              | ✅       |
+| `PORT`                | Server port (default: 1337)                                   | ✅       |
+| `APP_KEYS`            | Comma-separated random keys used by Strapi session management | ✅       |
+| `API_TOKEN_SALT`      | Salt for API token generation                                 | ✅       |
+| `ADMIN_JWT_SECRET`    | JWT secret for admin panel                                    | ✅       |
+| `TRANSFER_TOKEN_SALT` | Salt for data transfer tokens                                 | ✅       |
+| `JWT_SECRET`          | JWT secret for user-facing auth tokens                        | ✅       |
+| `ENCRYPTION_KEY`      | Encryption key for sensitive config values                    | ✅       |
+| `GEMINI_API_KEY`      | Google Gemini API key for food image analysis                 | ✅       |
 
 ---
 
 ## 📡 API Reference
 
-All endpoints require a `Bearer <JWT>` header unless marked as public.
+### Base URL
 
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/api/auth/local/register` | Public | Register a new user |
-| `POST` | `/api/auth/local` | Public | Login, returns JWT |
-| `GET` | `/api/users/me` | Required | Get current user profile |
-| `PUT` | `/api/users/:id` | Required | Update user profile (weight, goal, etc.) |
-| `GET` | `/api/food-logs` | Required | Get all food logs for the authenticated user |
-| `POST` | `/api/food-logs` | Required | Create a new food log entry |
-| `DELETE` | `/api/food-logs/:documentId` | Required | Delete a food log entry |
-| `GET` | `/api/activity-logs` | Required | Get all activity logs for the authenticated user |
-| `POST` | `/api/activity-logs` | Required | Create a new activity log entry |
-| `DELETE` | `/api/activity-logs/:documentId` | Required | Delete an activity log entry |
-| `POST` | `/api/image-analysis` | Required | Upload a food image (`multipart/form-data`, field: `image`). Returns `{ data: { name, calories } }` |
+```
+http://localhost:1337
+```
+
+### Endpoints
+
+| Method   | Endpoint                         | Description                                                   | Auth       |
+| -------- | -------------------------------- | ------------------------------------------------------------- | ---------- |
+| `POST`   | `/api/auth/local/register`       | Register a new user                                           | None       |
+| `POST`   | `/api/auth/local`                | Login and receive JWT                                         | None       |
+| `GET`    | `/api/users/me`                  | Get authenticated user profile                                | Bearer JWT |
+| `PUT`    | `/api/users/:id`                 | Update user profile (onboarding, fitness goals)               | Bearer JWT |
+| `GET`    | `/api/food-logs`                 | List authenticated user's food log entries                    | Bearer JWT |
+| `POST`   | `/api/food-logs`                 | Create a food log entry                                       | Bearer JWT |
+| `DELETE` | `/api/food-logs/:documentId`     | Delete a food log entry                                       | Bearer JWT |
+| `GET`    | `/api/activity-logs`             | List authenticated user's activity log entries                | Bearer JWT |
+| `POST`   | `/api/activity-logs`             | Create an activity log entry                                  | Bearer JWT |
+| `DELETE` | `/api/activity-logs/:documentId` | Delete an activity log entry                                  | Bearer JWT |
+| `POST`   | `/api/image-analysis`            | Upload a food image, receive `{ name, calories }` from Gemini | None       |
+
+### Authentication
+
+Strapi's `users-permissions` plugin issues a JWT on login and registration. The client stores this token in `localStorage` and injects it via an Axios request interceptor as `Authorization: Bearer <token>`. On 401 responses the interceptor clears the token and redirects to `/login`. The image analysis endpoint is intentionally unauthenticated (`config: { auth: false }`) to simplify the upload flow.
 
 ---
 
-## 🗄️ Data Models
+## 📐 Data Models
 
-### User (extended Strapi schema)
-
-```typescript
-{
+```ts
+interface User {
   id: string;
+  documentId?: string;
   email: string;
   username: string;
+  token: string;
   age?: number;
-  weight?: number;        // in kg
-  height?: number;        // in cm
+  weight?: number; // decimal
+  height?: number; // decimal
   goal?: "lose" | "maintain" | "gain";
-  dailyCalorieIntake?: number;   // user's calorie consumption goal
-  dailyCalorieBurn?: number;     // user's calorie burn goal
+  dailyCalorieIntake?: number;
+  dailyCalorieBurn?: number;
+  createdAt?: string;
 }
-```
 
-### FoodLog
-
-```typescript
-{
-  id: number;
-  documentId: string;
+interface FoodEntry {
+  id: number | string;
+  documentId?: string;
   name: string;
   calories: number;
   mealType: "breakfast" | "lunch" | "dinner" | "snack";
-  createdAt: string;       // ISO date string, used to filter entries by day
-  users_permissions_user: User;
+  date: string;
+  createdAt?: string;
 }
-```
 
-### ActivityLog
-
-```typescript
-{
+interface ActivityEntry {
   id: number;
   documentId: string;
   name: string;
-  duration: number;        // in minutes
-  calories: number;        // calories burned
-  createdAt: string;
-  users_permissions_user: User;
+  duration: number; // minutes
+  calories: number;
+  date: string;
+  createdAt?: string;
+}
+
+// Gemini image analysis response
+interface ImageAnalysisResult {
+  name: string;
+  calories: number;
 }
 ```
 
 ---
 
-<div align="center">
+## 🧪 Testing
 
-Built by [CB2104](https://github.com/CB2104) · [Live Demo](https://fitness-tracker-prototype.vercel.app) · [Portfolio](https://personal-folio-nu.vercel.app)
+No automated tests are present in the current codebase. The project is structured in a way that would support unit testing of the context logic and integration testing of the Axios API actions, but no test files or testing framework configuration exist at this time.
 
-</div>
+**Coverage includes:**
+
+- None currently — manual testing only
+
+---
+
+## 📚 Technical Learnings
+
+- Implementing a full JWT auth flow in a React SPA: token persistence, session restoration on reload via a bootstrap fetch, and interceptor-based 401 handling
+- Using Strapi v5 as a backend-as-a-service layer: extending the built-in User content type, configuring per-role API permissions, and writing custom controllers outside the generated pattern
+- Integrating a multimodal AI model (Gemini 2.5 Flash) with JSON mode to extract structured data from unstructured image input
+- Managing flat global client state with React Context for a multi-entity domain without introducing a heavy state management library
+- Enforcing an onboarding gate at the app shell level using conditional rendering before the router is mounted
+
+---
+
+## 👤 Author
+
+**Cesar Bastidas** — [@CB2104](https://github.com/CB2104)

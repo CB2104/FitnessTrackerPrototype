@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import { getMotivationalMessage } from "../assets/assets";
-import { useAppContext } from "../context/AppContext";
-import type { ActivityEntry, FoodEntry } from "../types";
+import { useAppContext } from "../context/useAppContext";
 import Card from "../components/ui/Card";
 import ProgressBar from "../components/ui/ProgressBar";
 import {
@@ -14,39 +12,28 @@ import {
   ZapIcon,
 } from "lucide-react";
 import CaloriesChart from "../components/CaloriesChart";
+import BMIIndicator from "../components/BMIIndicator";
+import { GOAL_LABELS } from "../utils/goal";
+import { filterToday } from "../utils/date";
+import {
+  DEFAULT_DAILY_CALORIE_BURN,
+  DEFAULT_DAILY_CALORIE_INTAKE,
+} from "../utils/defaults";
 
 const Dashboard = () => {
   const { user, allActivityLogs, allFoodLogs } = useAppContext();
-  const [todayFood, setTodayFood] = useState<FoodEntry[]>([]);
-  const [todayActivities, setTodayActivities] = useState<ActivityEntry[]>([]);
 
-  const DAILY_CALORIE_LIMIT: number = user?.dailyCalorieIntake || 2000;
-
-  // load user data
-  const loadUserData = () => {
-    const today = new Date().toISOString().split("T")[0];
-    const foodData = allFoodLogs.filter(
-      (f: FoodEntry) => f.createdAt?.split("T")[0] === today,
-    );
-    setTodayFood(foodData);
-    const activityData = allActivityLogs.filter(
-      (a: ActivityEntry) => a.createdAt?.split("T")[0] === today,
-    );
-    setTodayActivities(activityData);
-  };
-
-  useEffect(() => {
-    (() => {
-      loadUserData();
-    })();
-  }, [allActivityLogs, allFoodLogs]);
-
+  const todayActivities = filterToday(allActivityLogs);
+  const todayFood = filterToday(allFoodLogs);
+  const dailyCalorieIntake =
+    user?.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE;
+  const dailyCalorieBurn = user?.dailyCalorieBurn || DEFAULT_DAILY_CALORIE_BURN;
   const totalCalories: number = todayFood.reduce(
     (sum, item) => sum + item.calories,
     0,
   );
 
-  const remainingCalories: number = DAILY_CALORIE_LIMIT - totalCalories;
+  const remainingCalories: number = dailyCalorieIntake - totalCalories;
 
   const totalActiveMinutes: number = todayActivities.reduce(
     (sum, item) => sum + item.duration,
@@ -61,7 +48,7 @@ const Dashboard = () => {
   const motivation = getMotivationalMessage(
     totalCalories,
     totalActiveMinutes,
-    DAILY_CALORIE_LIMIT,
+    dailyCalorieIntake,
   );
 
   return (
@@ -104,11 +91,11 @@ const Dashboard = () => {
                   Limit
                 </p>
                 <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                  {DAILY_CALORIE_LIMIT}
+                  {dailyCalorieIntake}
                 </p>
               </div>
             </div>
-            <ProgressBar value={totalCalories} max={DAILY_CALORIE_LIMIT} />
+            <ProgressBar value={totalCalories} max={dailyCalorieIntake} />
 
             <div className="mt-4 flex justify-between items-center">
               <div
@@ -121,7 +108,7 @@ const Dashboard = () => {
                 </span>
               </div>
               <span className="text-sm text-slate-400">
-                {Math.round((totalCalories / DAILY_CALORIE_LIMIT) * 100)}%
+                {Math.round((totalCalories / dailyCalorieIntake) * 100)}%
               </span>
             </div>
 
@@ -146,14 +133,11 @@ const Dashboard = () => {
                   Goal
                 </p>
                 <p className="text-2xl font-bold text-slate-800 dark:text-white">
-                  {user?.dailyCalorieBurn || 400}
+                  {dailyCalorieBurn}
                 </p>
               </div>
             </div>
-            <ProgressBar
-              value={totalBurned}
-              max={user?.dailyCalorieBurn || 400}
-            />
+            <ProgressBar value={totalBurned} max={dailyCalorieBurn} />
           </Card>
 
           {/* Stats Row */}
@@ -196,10 +180,7 @@ const Dashboard = () => {
                 <div>
                   <p className="text-slate-400 text-sm">Your Goal</p>
                   <p className="text-white font-semibold capitalize">
-                    {user.goal === "lose" && "🔥 Lose Weight"}
-                    {user.goal === "maintain" && "⚖ Maintain Weight"}
-                    {user.goal === "gain" && "💪 Gain Muscle"}
-                    {/* =============== MD NOTAS PARA MEJORAR ESTO ================= */}
+                    {user.goal && GOAL_LABELS[user.goal]}
                   </p>
                 </div>
               </div>
@@ -217,7 +198,7 @@ const Dashboard = () => {
                   <h3 className="font-semibold text-slate-800 dark:text-white">
                     Body Metrics
                   </h3>
-                  <p className="text-slate-500 text-sm">Yours stats</p>
+                  <p className="text-slate-500 text-sm">Your stats</p>
                 </div>
               </div>
 
@@ -252,58 +233,7 @@ const Dashboard = () => {
                 )}
 
                 {user.height && (
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        BMI
-                      </span>
-                      {(() => {
-                        const bmi = (
-                          user.weight / Math.pow(user.height / 100, 2)
-                        ).toFixed(1);
-                        const getStatus = (b: number) => {
-                          if (b < 18.5)
-                            return {
-                              color: "text-blue-500",
-                              bg: "bg-blue-500",
-                            };
-                          if (b < 25)
-                            return {
-                              color: "text-emerald-500",
-                              bg: "bg-emerald-500",
-                            };
-                          if (b < 30)
-                            return {
-                              color: "text-orange-500",
-                              bg: "bg-orange-500",
-                            };
-                          return {
-                            color: "text-red-500",
-                            bg: "bg-red-500",
-                          };
-                        };
-                        const status = getStatus(Number(bmi));
-                        return (
-                          <span className={`text-lg font-bold ${status.color}`}>
-                            {bmi}
-                          </span>
-                        );
-                      })()}
-                    </div>
-
-                    {/* BMI Scale Visual */}
-                    <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
-                      <div className="flex-1 bg-blue-400 opacity-30"></div>
-                      <div className="flex-1 bg-emerald-500 opacity-30"></div>
-                      <div className="flex-1 bg-orange-500 opacity-30"></div>
-                      <div className="flex-1 bg-red-500 opacity-30"></div>
-                    </div>
-                    <div className="flex justify-between mt-1 text-[10px] text-slate-400">
-                      <span>18.5</span>
-                      <span>25</span>
-                      <span>30</span>
-                    </div>
-                  </div>
+                  <BMIIndicator weight={user.weight} height={user.height} />
                 )}
               </div>
             </Card>

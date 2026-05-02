@@ -4,7 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import FoodLog from "./pages/FoodLog";
 import ActivityLog from "./pages/ActivityLog";
 import Profile from "./pages/Profile";
-import { useAppContext } from "./context/AppContext";
+import { useAppContext } from "./context/useAppContext";
 import Login from "./pages/Login";
 import Loading from "./components/Loading";
 import Onboarding from "./pages/Onboarding";

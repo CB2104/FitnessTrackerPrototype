@@ -91,12 +91,6 @@ export const goalOptions = [
     { value: "gain", label: "Gain Muscle" },
 ];
 
-export const goalLabels = {
-    lose: "Lose Weight",
-    maintain: "Maintain Weight",
-    gain: "Gain Muscle",
-};
-
 export const ageRanges = [
     { max: 15, maintain: 2500, burn: 600 },
     { max: 18, maintain: 2550, burn: 600 },

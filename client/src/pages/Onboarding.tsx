@@ -18,8 +18,9 @@ import api from "../configs/api";
 import { handleError } from "../utils/errors";
 
 const Onboarding = () => {
+  const totalSteps = 3;
   const [step, setStep] = useState(1);
-  const { user, fetchUser, completeOnboarding } = useAppContext();
+  const { user, fetchUser } = useAppContext();
   const [formData, setFormData] = useState<ProfileFormData>({
     age: 0,
     weight: 0,
@@ -29,7 +30,20 @@ const Onboarding = () => {
     dailyCalorieBurn: 400,
   });
 
-  const totalSteps = 3;
+  const validateStep = (currentStep: number): string | null => {
+    if (currentStep === 1) {
+      const age = Number(formData.age);
+      if (!age) return "Please enter your age";
+      if (age < 13) return "You must be at least 13 years old";
+      if (age > 100) return "Please enter a valid age";
+    }
+    if (currentStep === 2) {
+      const weight = Number(formData.weight);
+      if (!weight) return "Please enter your weight";
+      if (weight < 20 || weight > 300) return "Please enter a valid weight";
+    }
+    return null;
+  };
 
   const updateField = (
     field: keyof ProfileFormData,
@@ -38,37 +52,58 @@ const Onboarding = () => {
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleNext = async () => {
-    if (step === 1) {
-      if (
-        !formData.age ||
-        Number(formData.age) < 13 ||
-        Number(formData.age) > 120
-      ) {
-        return toast("Age is required");
-      }
+  const handleNext = () => {
+    const error = validateStep(step);
+    if (error) {
+      toast.error(error);
+      return;
     }
+
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      const userData = {
-        ...formData,
-        age: formData.age,
-        weight: formData.weight,
-        height: formData.height ? formData.height : null,
-        createAt: new Date().toISOString(),
-      };
-      localStorage.setItem("fitnessUser", JSON.stringify(userData));
-
-      try {
-        await api.put(`/api/users/${user?.id}`, userData);
-        toast.success("Profile update successfully!");
-        completeOnboarding();
-        fetchUser(user?.token || "");
-      } catch (error) {
-        handleError(error);
-      }
+      handleSubmit();
     }
+  };
+
+  const handleSubmit = async () => {
+    const userData = {
+      ...formData,
+      height: formData.height || null,
+    };
+
+    try {
+      await api.put(`/api/users/${user?.id}`, userData);
+      toast.success("Profile updated successfully!");
+      if (user?.token) {
+        await fetchUser(user.token);
+      }
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  const handleGoalSelect = (goalValue: "lose" | "maintain" | "gain") => {
+    const age = Number(formData.age);
+    const range =
+      ageRanges.find((r) => age <= r?.max) || ageRanges[ageRanges.length - 1];
+    let intake = range.maintain;
+    let burn = range.burn;
+
+    if (goalValue === "lose") {
+      intake -= 400;
+      burn += 100;
+    } else if (goalValue === "gain") {
+      intake += 500;
+      burn -= 100;
+    }
+
+    setFormData({
+      ...formData,
+      goal: goalValue,
+      dailyCalorieIntake: intake,
+      dailyCalorieBurn: burn,
+    });
   };
 
   return (
@@ -90,7 +125,7 @@ const Onboarding = () => {
           </p>
         </div>
 
-        {/* progress indicador */}
+        {/* progress indicator */}
         <div className="px-6 mb-8 onboarding-wrapper">
           <div className="flex gap-2 max-w-2xl">
             {[1, 2, 3].map((s) => (
@@ -130,7 +165,7 @@ const Onboarding = () => {
                 onChange={(v) => updateField("age", v)}
                 placeholder="Enter your age"
                 min={13}
-                max={120}
+                max={100}
                 required
               />
             </div>
@@ -195,29 +230,11 @@ const Onboarding = () => {
                 {goalOptions.map((option) => (
                   <button
                     key={option.value}
-                    onClick={() => {
-                      const age = Number(formData.age);
-                      const range =
-                        ageRanges.find((r) => age <= r?.max) ||
-                        ageRanges[ageRanges.length - 1];
-                      let intake = range.maintain;
-                      let burn = range.burn;
-
-                      if (option.value === "lose") {
-                        intake -= 400;
-                        burn += 100;
-                      } else if (option.value === "gain") {
-                        intake += 500;
-                        burn -= 100;
-                      }
-
-                      setFormData({
-                        ...formData,
-                        goal: option.value as "lose" | "maintain" | "gain",
-                        dailyCalorieIntake: intake,
-                        dailyCalorieBurn: burn,
-                      });
-                    }}
+                    onClick={() =>
+                      handleGoalSelect(
+                        option.value as "lose" | "maintain" | "gain",
+                      )
+                    }
                     className={`onboarding-option-btn ${formData.goal === option.value && "ring-2 ring-emerald-500"}`}
                   >
                     <span className="text-base text-slate-700 dark:text-slate-200">
@@ -268,7 +285,7 @@ const Onboarding = () => {
             {step > 1 && (
               <Button
                 variant="secondary"
-                onClick={() => setStep(step > 1 ? step - 1 : 1)}
+                onClick={() => setStep(step - 1)}
                 className="max-lg:flex-1 lg:px-10"
               >
                 <span className="flex items-center justify-center gap-2">

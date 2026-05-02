@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useAppContext } from "../context/AppContext";
+import { useState } from "react";
+import { useAppContext } from "../context/useAppContext";
 import { useTheme } from "../context/ThemeContext";
 import type { ProfileFormData } from "../types";
 import Card from "../components/ui/Card";
@@ -13,11 +13,17 @@ import {
   UserIcon,
 } from "lucide-react";
 import Button from "../components/ui/Button";
-import { goalLabels, goalOptions } from "../assets/assets";
+import { GOAL_LABELS } from "../utils/goal";
+import { goalOptions } from "../assets/assets";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import toast from "react-hot-toast";
 import api from "../configs/api";
+import { handleError } from "../utils/errors";
+import {
+  DEFAULT_DAILY_CALORIE_BURN,
+  DEFAULT_DAILY_CALORIE_INTAKE,
+} from "../utils/defaults";
 
 const Profile = () => {
   const { user, logout, fetchUser, allFoodLogs, allActivityLogs } =
@@ -27,56 +33,64 @@ const Profile = () => {
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const [formData, setFormData] = useState<ProfileFormData>({
-    age: 0,
-    weight: 0,
-    height: 0,
-    goal: "maintain",
-    dailyCalorieIntake: 2000,
-    dailyCalorieBurn: 400,
-  });
+  const [formData, setFormData] = useState<ProfileFormData>(() => ({
+    age: user?.age || 0,
+    weight: user?.weight || 0,
+    height: user?.height || 0,
+    goal: user?.goal || "maintain",
+    dailyCalorieIntake:
+      user?.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
+    dailyCalorieBurn: user?.dailyCalorieBurn || DEFAULT_DAILY_CALORIE_BURN,
+  }));
 
-  const fetchUserData = () => {
-    if (user) {
-      setFormData({
-        age: user?.age || 0,
-        weight: user.weight || 0,
-        height: user?.height || 0,
-        goal: user?.goal || "maintain",
-        dailyCalorieIntake: user?.dailyCalorieIntake || 2000,
-        dailyCalorieBurn: user?.dailyCalorieBurn || 400,
-      });
-    }
+  const resetFormFromUser = () => {
+    if (!user) return;
+    setFormData({
+      age: user.age || 0,
+      weight: user.weight || 0,
+      height: user.height || 0,
+      goal: user.goal || "maintain",
+      dailyCalorieIntake:
+        user.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
+      dailyCalorieBurn: user.dailyCalorieBurn || DEFAULT_DAILY_CALORIE_BURN,
+    });
   };
 
-  useEffect(() => {
-    (() => {
-      fetchUserData();
-    })();
-  }, [user]);
+  const validateForm = (): string | null => {
+    const age = Number(formData.age);
+    if (!age || age < 13 || age > 100) return "Please enter a valid age";
+
+    const weight = Number(formData.weight);
+    if (!weight || weight < 20 || weight > 300)
+      return "Please enter a valid weight";
+
+    if (formData.height) {
+      const height = Number(formData.height);
+      if (height < 100 || height > 250) return "Please enter a valid height";
+    }
+
+    return null;
+  };
 
   const handleSave = async () => {
+    const error = validateForm();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
     try {
       await api.put(`/api/users/${user?.id}`, formData);
-
-      await fetchUser(user?.token || "");
+      if (user?.token) await fetchUser(user.token);
       toast.success("Profile updated successfully");
-    } catch (error: any) {
-      console.log(error);
-      toast.error(error?.message || "Failed to update profile");
+      setIsEditing(false);
+    } catch (error) {
+      handleError(error);
     }
-    setIsEditing(false);
   };
 
-  const getStats = () => {
-    const totalFoodEntries = allFoodLogs?.length || 0;
-    const totalActivities = allActivityLogs?.length || 0;
-    return {
-      totalFoodEntries,
-      totalActivities,
-    };
-  };
-  const stats = getStats();
+  const totalFoodEntries = allFoodLogs?.length || 0;
+  const totalActivities = allActivityLogs?.length || 0;
 
   if (!user || !formData) return null;
   return (
@@ -119,7 +133,7 @@ const Profile = () => {
                 value={formData.age}
                 onChange={(v) => setFormData({ ...formData, age: Number(v) })}
                 min={13}
-                max={120}
+                max={100}
               />
               <Input
                 label="Weight (kg)"
@@ -132,7 +146,7 @@ const Profile = () => {
                 max={300}
               />
               <Input
-                label="Heigth (cm)"
+                label="Height (cm)"
                 type="number"
                 value={formData.height}
                 onChange={(v) =>
@@ -159,15 +173,8 @@ const Profile = () => {
                   variant="secondary"
                   className="flex-1"
                   onClick={() => {
+                    resetFormFromUser();
                     setIsEditing(false);
-                    setFormData({
-                      age: Number(user.age),
-                      weight: Number(user.weight),
-                      height: Number(user.height),
-                      goal: user.goal || "",
-                      dailyCalorieIntake: user.dailyCalorieIntake || 2000,
-                      dailyCalorieBurn: user.dailyCalorieBurn || 400,
-                    });
                   }}
                 >
                   Cancel
@@ -210,7 +217,7 @@ const Profile = () => {
                 </div>
 
                 {/* height */}
-                {user.height !== 0 && (
+                {user.height && (
                   <div className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg transition-colors duration-200">
                     <div className="size-10 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
                       <User className="size-4/5 text-green-600 dark:text-green-400" />
@@ -237,7 +244,7 @@ const Profile = () => {
                       Goal
                     </p>
                     <p className="font-semibold text-slate-800 dark:text-white">
-                      {goalLabels[user?.goal || "gain"]}
+                      {GOAL_LABELS[user?.goal || "gain"]}
                     </p>
                   </div>
                 </div>
@@ -262,7 +269,7 @@ const Profile = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl">
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                  {stats.totalFoodEntries}
+                  {totalFoodEntries}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Food entries
@@ -270,7 +277,7 @@ const Profile = () => {
               </div>
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl">
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {stats.totalActivities}
+                  {totalActivities}
                 </p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Activities
