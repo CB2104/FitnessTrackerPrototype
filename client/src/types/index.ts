@@ -37,7 +37,7 @@ export interface UserData {
 export interface ProfileFormData {
   age: number;
   weight: number;
-  height: number;
+  height: number | null;
   goal: string;
   dailyCalorieIntake: number;
   dailyCalorieBurn: number;

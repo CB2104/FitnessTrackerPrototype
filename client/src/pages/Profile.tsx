@@ -36,7 +36,7 @@ const Profile = () => {
   const [formData, setFormData] = useState<ProfileFormData>(() => ({
     age: user?.age || 0,
     weight: user?.weight || 0,
-    height: user?.height || 0,
+    height: user?.height || null,
     goal: user?.goal || "maintain",
     dailyCalorieIntake:
       user?.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
@@ -48,7 +48,7 @@ const Profile = () => {
     setFormData({
       age: user.age || 0,
       weight: user.weight || 0,
-      height: user.height || 0,
+      height: user.height || null,
       goal: user.goal || "maintain",
       dailyCalorieIntake:
         user.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
@@ -78,9 +78,13 @@ const Profile = () => {
       toast.error(error);
       return;
     }
+    const payload = {
+      ...formData,
+      height: formData.height || null, 
+    };
 
     try {
-      await api.put(`/api/users/${user?.id}`, formData);
+      await api.put(`/api/users/${user?.id}`, payload);
       if (user?.token) await fetchUser(user.token);
       toast.success("Profile updated successfully");
       setIsEditing(false);
@@ -148,9 +152,9 @@ const Profile = () => {
               <Input
                 label="Height (cm)"
                 type="number"
-                value={formData.height}
+                value={formData.height ?? ""}
                 onChange={(v) =>
-                  setFormData({ ...formData, height: Number(v) })
+                  setFormData({ ...formData, height: v ? Number(v) : null })
                 }
                 min={100}
                 max={250}
