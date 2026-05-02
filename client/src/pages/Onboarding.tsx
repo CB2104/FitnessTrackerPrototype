@@ -41,6 +41,10 @@ const Onboarding = () => {
       const weight = Number(formData.weight);
       if (!weight) return "Please enter your weight";
       if (weight < 20 || weight > 300) return "Please enter a valid weight";
+      if (formData.height) {
+        const height = Number(formData.height);
+        if (height < 100 || height > 250) return "Please enter a valid height";
+      }
     }
     return null;
   };
