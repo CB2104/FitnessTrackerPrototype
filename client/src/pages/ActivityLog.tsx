@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext } from "../context/useAppContext";
 import type { ActivityEntry } from "../types";
 import Card from "../components/ui/Card";
 import { quickActivities } from "../assets/assets";
@@ -14,9 +14,11 @@ import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import toast from "react-hot-toast";
 import api from "../configs/api";
+import { handleError } from "../utils/errors";
 
 const ActivityLog = () => {
-  const { allActivityLogs, setAllActivityLogs } = useAppContext();
+  const { allActivityLogs, addActivityLog, removeActivityLog } =
+    useAppContext();
 
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -50,18 +52,15 @@ const ActivityLog = () => {
     try {
       const { data } = await api.post("/api/activity-logs", { data: formData });
 
-      setAllActivityLogs((prev) => [...prev, data]);
+      addActivityLog(data);
       setFormData({
         name: "",
         duration: 0,
         calories: 0,
       });
       setShowForm(false);
-    } catch (error: any) {
-      console.log(error);
-      toast.error(
-        error?.response?.data?.console.error?.message || error?.message,
-      );
+    } catch (error) {
+      handleError(error);
     }
   };
 
@@ -92,12 +91,9 @@ const ActivityLog = () => {
       );
       if (!confirm) return;
       await api.delete(`/api/activity-logs/${documentId}`);
-      setAllActivityLogs((prev) =>
-        prev.filter((a) => a.documentId !== documentId),
-      );
-    } catch (error: any) {
-      console.log(error)
-      toast.error(error?.response?.data?.error?.message || error?.message)
+      removeActivityLog(documentId);
+    } catch (error) {
+      handleError(error);
     }
   };
 
@@ -195,7 +191,7 @@ const ActivityLog = () => {
                   required
                   min={1}
                   max={2000}
-                  value={formData.duration}
+                  value={formData.calories}
                   onChange={(v) =>
                     setFormData({ ...formData, calories: Number(v) })
                   }

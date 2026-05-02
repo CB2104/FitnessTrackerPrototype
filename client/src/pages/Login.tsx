@@ -1,29 +1,58 @@
 import { AtSignIcon, EyeIcon, EyeOffIcon, LockIcon, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppContext } from "../context/AppContext";
-import { Toaster } from "react-hot-toast";
+import { useAppContext } from "../context/useAppContext";
+import toast, { Toaster } from "react-hot-toast";
+
+type AuthMode = "login" | "signup";
 
 const Login = () => {
-  const [state, setState] = useState("login");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateField = (field: keyof typeof form, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   const navigate = useNavigate();
   const { login, signup, user } = useAppContext();
 
+  const validateForm = (): string | null => {
+    if (mode === "signup" && form.username.trim().length < 3) {
+      return "Username must be at least 3 characters";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      return "Please enter a valid email";
+    }
+    if (form.password.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    if (state === "login") {
-      await login({ email, password });
-    } else {
-      await signup({ username, email, password });
+
+    const error = validateForm();
+    if (error) {
+      toast.error(error);
+      return;
     }
-    setIsSubmitting(false);
+    setIsSubmitting(true);
+    try {
+      if (mode === "login") {
+        await login({ email: form.email, password: form.password });
+      } else {
+        await signup({
+          username: form.username,
+          email: form.email,
+          password: form.email,
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -37,17 +66,17 @@ const Login = () => {
       <Toaster />
       <main className="login-page-container">
         <form onSubmit={handleSubmit} className="login-form">
-          <h2 className="text-3xl font-medium to-gray-900 dark:text-white">
-            {state === "login" ? "Sign in" : "Sign up"}
+          <h2 className="text-3xl font-medium text-gray-900 dark:text-white">
+            {mode === "login" ? "Sign in" : "Sign up"}
           </h2>
           <p className="mt-2 text-sm text-gray-500/90 dark:text-gray-400">
-            {state === "login"
+            {mode === "login"
               ? "Please enter email and password to sign in to your account."
               : "Please enter your details to create a new account."}
           </p>
 
           {/* Form fields and buttons would go here */}
-          {state !== "login" && (
+          {mode !== "login" && (
             <div className="mt-4">
               <label className="font-medium text-sm text-gray-700 dark:text-gray-300">
                 Username
@@ -55,8 +84,8 @@ const Login = () => {
               <div className="relative mt-2">
                 <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4.5" />
                 <input
-                  onChange={(e) => setUsername(e.target.value)}
-                  value={username} //validationMessage
+                  onChange={(e) => updateField("username", e.target.value)}
+                  value={form.username}
                   type="text"
                   placeholder="enter a username"
                   className="login-input"
@@ -73,8 +102,8 @@ const Login = () => {
             <div className="relative mt-2">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4.5" />
               <input
-                onChange={(e) => setEmail(e.target.value)}
-                value={email} //validationMessage
+                onChange={(e) => updateField("email", e.target.value)}
+                value={form.email}
                 type="email"
                 placeholder="enter your email"
                 className="login-input"
@@ -91,8 +120,8 @@ const Login = () => {
             <div className="relative mt-2">
               <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 size-4.5" />
               <input
-                onChange={(e) => setPassword(e.target.value)}
-                value={password} //validationMessage
+                onChange={(e) => updateField("password", e.target.value)}
+                value={form.password}
                 type={showPassword ? "text" : "password"}
                 placeholder="enter your password"
                 className="login-input pr-10"
@@ -119,16 +148,16 @@ const Login = () => {
           >
             {isSubmitting
               ? "Signing in..."
-              : state === "login"
+              : mode === "login"
                 ? "Login"
                 : "Sign Up"}
           </button>
 
-          {state === "login" ? (
+          {mode === "login" ? (
             <p className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
               Don't have an account?{" "}
               <button
-                onClick={() => setState("signup")}
+                onClick={() => setMode("signup")}
                 className="ml-1 cursor-pointer text-green-600 hover:underline"
               >
                 Sign up
@@ -138,7 +167,7 @@ const Login = () => {
             <p className="text-center py-6 text-sm text-gray-500 dark:text-gray-400">
               Already have an account?{" "}
               <button
-                onClick={() => setState("login")}
+                onClick={() => setMode("login")}
                 className="ml-1 cursor-pointer text-green-600 hover:underline"
               >
                 Login

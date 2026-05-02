@@ -8,17 +8,18 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext } from "../context/useAppContext";
 import type { ProfileFormData } from "../types";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import { ageRanges, goalOptions } from "../assets/assets";
 import Slider from "../components/ui/Slider";
 import api from "../configs/api";
+import { handleError } from "../utils/errors";
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
-  const { user, setOnboardingCompleted, fetchUser } = useAppContext();
+  const { user, fetchUser, completeOnboarding } = useAppContext();
   const [formData, setFormData] = useState<ProfileFormData>({
     age: 0,
     weight: 0,
@@ -59,15 +60,13 @@ const Onboarding = () => {
       };
       localStorage.setItem("fitnessUser", JSON.stringify(userData));
 
-      console.log("User ID from context:", user?.id);
-      console.log("Token:", user?.token);
       try {
         await api.put(`/api/users/${user?.id}`, userData);
         toast.success("Profile update successfully!");
-        setOnboardingCompleted(true);
+        completeOnboarding();
         fetchUser(user?.token || "");
-      } catch (error: any) {
-        toast.error(error.message);
+      } catch (error) {
+        handleError(error);
       }
     }
   };

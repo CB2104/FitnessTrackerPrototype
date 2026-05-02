@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext } from "../context/useAppContext";
 import type { FoodEntry, FormData } from "../types";
 import Card from "../components/ui/Card";
 import {
@@ -20,9 +20,10 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import toast from "react-hot-toast";
 import api from "../configs/api";
+import { handleError } from "../utils/errors";
 
 const FoodLog = () => {
-  const { allFoodLogs, setAllFoodLogs } = useAppContext();
+  const { allFoodLogs, addFoodLog, removeFoodLog } = useAppContext();
 
   const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -59,12 +60,11 @@ const FoodLog = () => {
       const { data } = await api.post("/api/food-logs", {
         data: formData,
       });
-      setAllFoodLogs((prev) => [...prev, data]);
+      addFoodLog(data);
       setFormData({ name: "", calories: 0, mealType: "" });
       setShowForm(false);
-    } catch (error: any) {
-      console.log(error);
-      toast.error(error?.response?.dataerror?.message || error?.message);
+    } catch (error) {
+      handleError(error);
     }
   };
 
@@ -75,10 +75,9 @@ const FoodLog = () => {
       );
       if (!confirm) return;
       await api.delete(`/api/food-logs/${documentId}`);
-      setAllFoodLogs((prev) => prev.filter((e) => e.documentId !== documentId));
-    } catch (error: any) {
-      console.log(error);
-      toast.error(error?.response?.dataerror?.message || error?.message);
+      removeFoodLog(documentId);
+    } catch (error) {
+      handleError(error);
     }
   };
 
@@ -140,10 +139,9 @@ const FoodLog = () => {
           mealType,
         },
       });
-      console.log("✅ Saved:", response.data);
 
       // Actualizar la lista
-      setAllFoodLogs((prev) => [...prev, response.data]);
+      addFoodLog(response.data);
 
       toast.success(`Added: ${result.name} (${result.calories} kcal)`);
 
