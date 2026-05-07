@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./pages/Layout";
 import Dashboard from "./pages/Dashboard";
 import FoodLog from "./pages/FoodLog";
@@ -32,6 +32,7 @@ const App = () => {
             <Route path="activity" element={<ActivityLog />} />
             <Route path="profile" element={<Profile />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}
     </>
