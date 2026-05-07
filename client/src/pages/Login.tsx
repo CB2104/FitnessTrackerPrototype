@@ -2,7 +2,7 @@ import { AtSignIcon, EyeIcon, EyeOffIcon, LockIcon, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/useAppContext";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 type AuthMode = "login" | "signup";
 
@@ -62,8 +62,6 @@ const Login = () => {
   }, [user, navigate]);
 
   return (
-    <>
-      <Toaster />
       <main className="login-page-container">
         <form onSubmit={handleSubmit} className="login-form">
           <h2 className="text-3xl font-medium text-gray-900 dark:text-white">
@@ -176,7 +174,6 @@ const Login = () => {
           )}
         </form>
       </main>
-    </>
   );
 };
 

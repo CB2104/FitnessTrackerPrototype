@@ -1,3 +1,6 @@
+import type { Goal } from "../utils/goal";
+import type { MealType } from "../utils/mealType";
+
 // User
 export type User = {
   id: string;
@@ -8,7 +11,7 @@ export type User = {
   age?: number;
   weight?: number;
   height?: number;
-  goal?: "lose" | "maintain" | "gain";
+  goal?: Goal;
   dailyCalorieIntake?: number;
   dailyCalorieBurn?: number;
   createdAt?: string;
@@ -27,7 +30,7 @@ export interface UserData {
   age: number;
   weight: number;
   height: number | null;
-  goal: "lose" | "maintain" | "gain";
+  goal: Goal;
   dailyCalorieIntake?: number;
   dailyCalorieBurn?: number;
   createdAt: string;
@@ -38,7 +41,7 @@ export interface ProfileFormData {
   age: number;
   weight: number;
   height: number | null;
-  goal: string;
+  goal: Goal;
   dailyCalorieIntake: number;
   dailyCalorieBurn: number;
 }
@@ -55,7 +58,7 @@ export interface FoodEntry {
   id: number | string;
   name: string;
   calories: number;
-  mealType: "breakfast" | "lunch" | "dinner" | "snack";
+  mealType: MealType;
   date: string;
   createdAt?: string;
   documentId?: string;
@@ -87,5 +90,4 @@ export type AppContextType = {
   allActivityLogs: ActivityEntry[];
   addActivityLog: (entry: ActivityEntry) => void;
   removeActivityLog: (documentId: string) => void;
-  
 };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useAppContext } from "../context/useAppContext";
 import type { FoodEntry, FormData } from "../types";
 import Card from "../components/ui/Card";
@@ -21,47 +21,46 @@ import Select from "../components/ui/Select";
 import toast from "react-hot-toast";
 import api from "../configs/api";
 import { handleError } from "../utils/errors";
+import { filterToday } from "../utils/date";
+import {
+  inferMealTypeFromHour,
+  MEAL_TYPES,
+  type MealType,
+} from "../utils/mealType";
+
+const INITIAL_FORM_DATA: FormData = {
+  name: "",
+  calories: 0,
+  mealType: "",
+};
 
 const FoodLog = () => {
   const { allFoodLogs, addFoodLog, removeFoodLog } = useAppContext();
 
-  const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    calories: 0,
-    mealType: "",
-  });
+  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const today = new Date().toISOString().split("T")[0];
+  const entries = filterToday(allFoodLogs);
 
-  const loadEntries = () => {
-    const todayEntries = allFoodLogs.filter(
-      (e: FoodEntry) => e.createdAt?.split("T")[0] === today,
-    );
-    setEntries(todayEntries);
+  const validateForm = (data: FormData): string | null => {
+    if (!data.name.trim()) return "Food name is required";
+    if (data.calories <= 0) return "Calories must be greater than 0";
+    if (!data.mealType) return "Please select a meal type";
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (
-      !formData.name.trim() ||
-      !formData.calories ||
-      formData.calories <= 0 ||
-      !formData.mealType
-    ) {
-      return toast.error("Please enter valid data");
-    }
-
+    const error = validateForm(formData);
+    if (error) return toast.error(error);
     try {
       const { data } = await api.post("/api/food-logs", {
         data: formData,
       });
       addFoodLog(data);
-      setFormData({ name: "", calories: 0, mealType: "" });
+      setFormData(INITIAL_FORM_DATA);
       setShowForm(false);
     } catch (error) {
       handleError(error);
@@ -84,16 +83,13 @@ const FoodLog = () => {
   const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
 
   // Group entries by meal type
-  const groupedEntries: Record<
-    "breakfast" | "lunch" | "dinner" | "snack",
-    FoodEntry[]
-  > = entries.reduce(
+  const groupedEntries: Record<MealType, FoodEntry[]> = entries.reduce(
     (acc, entry) => {
       if (!acc[entry.mealType]) acc[entry.mealType] = [];
       acc[entry.mealType].push(entry);
       return acc;
     },
-    {} as Record<"breakfast" | "lunch" | "dinner" | "snack", FoodEntry[]>,
+    {} as Record<MealType, FoodEntry[]>,
   );
 
   const handleQuickAdd = (activityName: string) => {
@@ -101,36 +97,25 @@ const FoodLog = () => {
     setShowForm(true);
   };
 
-  // FoodLog.tsx - handleImageChange
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
-    const formData = new FormData();
-    formData.append("image", file);
+    const imageFormData = new FormData();
+    imageFormData.append("image", file);
 
     try {
-      const { data } = await api.post("/api/image-analysis", formData);
-      const result = data.data || data; // Manejar ambos formatos
+      const { data } = await api.post("/api/image-analysis", imageFormData);
+      // TODO: normalize image-analysis response shape on backend (sometimes wrapped, sometimes raw)
+      const result = data.data || data;
 
       if (!result || !result.name || !result.calories) {
         return toast.error("Invalid response from AI");
       }
 
-      // Determinar meal type basado en la hora
-      let mealType = "";
-      const hour = new Date().getHours();
-
-      if (hour >= 0 && hour < 12) {
-        mealType = "breakfast";
-      } else if (hour >= 12 && hour < 16) {
-        mealType = "lunch";
-      } else if (hour >= 16 && hour < 18) {
-        mealType = "snack";
-      } else {
-        mealType = "dinner";
-      }
+      // Infer meal type from time of day
+      const mealType = inferMealTypeFromHour(new Date().getHours());
 
       const response = await api.post("/api/food-logs", {
         data: {
@@ -140,7 +125,7 @@ const FoodLog = () => {
         },
       });
 
-      // Actualizar la lista
+      // Update
       addFoodLog(response.data);
 
       toast.success(`Added: ${result.name} (${result.calories} kcal)`);
@@ -149,24 +134,12 @@ const FoodLog = () => {
       if (inputRef.current) {
         inputRef.current.value = "";
       }
-    } catch (error: any) {
-      console.error("❌ Error:", error);
-      console.error("Response:", error.response?.data);
-      toast.error(
-        error?.response?.data?.error?.message ||
-          error?.message ||
-          "Analysis failed",
-      );
+    } catch (error) {
+      handleError(error);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    (() => {
-      loadEntries();
-    })();
-  }, [allFoodLogs]);
 
   return (
     <div className="page-container">
@@ -188,7 +161,6 @@ const FoodLog = () => {
             <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
               {totalCalories} kcal
             </p>
-            <p></p>
           </div>
         </div>
       </div>
@@ -252,9 +224,7 @@ const FoodLog = () => {
               <Input
                 label="Food Name"
                 value={formData.name}
-                onChange={(v) =>
-                  setFormData({ ...formData, name: v.toString() })
-                }
+                onChange={(v) => setFormData({ ...formData, name: v })}
                 placeholder="e.g, Grilled Chicken Salad"
                 required
               />
@@ -274,9 +244,7 @@ const FoodLog = () => {
               <Select
                 label="Meal Type"
                 value={formData.mealType}
-                onChange={(v) =>
-                  setFormData({ ...formData, mealType: v.toString() })
-                }
+                onChange={(v) => setFormData({ ...formData, mealType: v })}
                 options={mealTypeOptions}
                 placeholder="Select meal type"
                 required
@@ -288,11 +256,7 @@ const FoodLog = () => {
                   variant="secondary"
                   onClick={() => {
                     setShowForm(false);
-                    setFormData({
-                      name: "",
-                      calories: 0,
-                      mealType: "",
-                    });
+                    setFormData(INITIAL_FORM_DATA);
                   }}
                 >
                   Cancel
@@ -320,12 +284,11 @@ const FoodLog = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {["breakfast", "lunch", "dinner", "snack"].map((mealType) => {
-              const mealTypeKey = mealType as keyof typeof groupedEntries;
-              if (!groupedEntries[mealTypeKey]) return null;
+            {MEAL_TYPES.map((mealType) => {
+              if (!groupedEntries[mealType]) return null;
 
-              const MealIcon = mealIcons[mealTypeKey];
-              const mealCalories = groupedEntries[mealTypeKey].reduce(
+              const MealIcon = mealIcons[mealType];
+              const mealCalories = groupedEntries[mealType].reduce(
                 (sum, e) => sum + e.calories,
                 0,
               );
@@ -335,7 +298,7 @@ const FoodLog = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${mealColors[mealTypeKey]}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${mealColors[mealType]}`}
                       >
                         <MealIcon className="size-5" />
                       </div>
@@ -344,7 +307,7 @@ const FoodLog = () => {
                           {mealType}
                         </h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {groupedEntries[mealTypeKey].length} items
+                          {groupedEntries[mealType].length} items
                         </p>
                       </div>
                     </div>
@@ -354,13 +317,12 @@ const FoodLog = () => {
                   </div>
 
                   <div className="space-y-2">
-                    {groupedEntries[mealTypeKey].map((entry) => (
+                    {groupedEntries[mealType].map((entry) => (
                       <div key={entry.id} className="food-entry-item">
                         <div className="flex-1">
                           <p className="font-medium text-slate-700 dark:text-slate-200">
                             {entry.name}
                           </p>
-                          <p className="text-sm text-slate-400">{}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">

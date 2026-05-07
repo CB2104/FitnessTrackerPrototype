@@ -2,14 +2,13 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 /**
- Para calibrar errores entendibles en humano
+ * Extracts a human-readable error message from any error shape.
+ * Handles axios errors, native Error instances, and unknown values.
  */
 export const getErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     return (
-      error.response?.data?.error?.message ??
-      error.message ??
-      "Network error"
+      error.response?.data?.error?.message ?? error.message ?? "Network error"
     );
   }
 
@@ -21,7 +20,7 @@ export const getErrorMessage = (error: unknown): string => {
 };
 
 /**
- Errores por default
+ * Default error handler: logs the error and shows a toast notification.
  */
 export const handleError = (error: unknown): void => {
   console.error(error);

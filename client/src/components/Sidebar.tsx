@@ -1,23 +1,9 @@
-import {
-  ActivityIcon,
-  HomeIcon,
-  MoonIcon,
-  PersonStandingIcon,
-  SunIcon,
-  UserIcon,
-  UtensilsIcon,
-} from "lucide-react";
-import { useTheme } from "../context/ThemeContext";
+import { MoonIcon, PersonStandingIcon, SunIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { NAV_ITEMS } from "../utils/navigation";
+import useTheme from "../context/useTheme";
 
 const Sidebar = () => {
-  const navItems = [
-    { path: "/", label: "Home", icon: HomeIcon },
-    { path: "/food", label: "Food", icon: UtensilsIcon },
-    { path: "/activity", label: "Activity", icon: ActivityIcon },
-    { path: "/profile", label: "Profile", icon: UserIcon },
-  ];
-
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -31,15 +17,15 @@ const Sidebar = () => {
         </h1>
       </div>
       <div className="flex flex-col gap-2">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <NavLink
             to={item.path}
             key={item.path}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-2.5 border-l-4 transition-all duration-200 ${
                 isActive
-                  ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 font-medium"
-                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700  dark:hover:text-slate-200 border-transparent"
+                  ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 font-medium border-emerald-500"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 border-transparent"
               }`
             }
           >

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useAppContext } from "../context/useAppContext";
-import { useTheme } from "../context/ThemeContext";
 import type { ProfileFormData } from "../types";
 import Card from "../components/ui/Card";
 import {
@@ -13,17 +12,15 @@ import {
   UserIcon,
 } from "lucide-react";
 import Button from "../components/ui/Button";
-import { GOAL_LABELS } from "../utils/goal";
+import { GOAL_LABELS, type Goal } from "../utils/goal";
 import { goalOptions } from "../assets/assets";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import toast from "react-hot-toast";
 import api from "../configs/api";
 import { handleError } from "../utils/errors";
-import {
-  DEFAULT_DAILY_CALORIE_BURN,
-  DEFAULT_DAILY_CALORIE_INTAKE,
-} from "../utils/defaults";
+import { buildFormDataFromUser } from "../utils/user";
+import useTheme from "../context/useTheme";
 
 const Profile = () => {
   const { user, logout, fetchUser, allFoodLogs, allActivityLogs } =
@@ -33,27 +30,15 @@ const Profile = () => {
 
   const [isEditing, setIsEditing] = useState(false);
 
-  const [formData, setFormData] = useState<ProfileFormData>(() => ({
-    age: user?.age || 0,
-    weight: user?.weight || 0,
-    height: user?.height || null,
-    goal: user?.goal || "maintain",
-    dailyCalorieIntake:
-      user?.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
-    dailyCalorieBurn: user?.dailyCalorieBurn || DEFAULT_DAILY_CALORIE_BURN,
-  }));
+  const [formData, setFormData] = useState<ProfileFormData>(() =>
+    buildFormDataFromUser(user),
+  );
+
+  if (!user) return null;
 
   const resetFormFromUser = () => {
     if (!user) return;
-    setFormData({
-      age: user.age || 0,
-      weight: user.weight || 0,
-      height: user.height || null,
-      goal: user.goal || "maintain",
-      dailyCalorieIntake:
-        user.dailyCalorieIntake || DEFAULT_DAILY_CALORIE_INTAKE,
-      dailyCalorieBurn: user.dailyCalorieBurn || DEFAULT_DAILY_CALORIE_BURN,
-    });
+    setFormData(buildFormDataFromUser(user));
   };
 
   const validateForm = (): string | null => {
@@ -80,7 +65,7 @@ const Profile = () => {
     }
     const payload = {
       ...formData,
-      height: formData.height || null, 
+      height: formData.height || null,
     };
 
     try {
@@ -96,7 +81,6 @@ const Profile = () => {
   const totalFoodEntries = allFoodLogs?.length || 0;
   const totalActivities = allActivityLogs?.length || 0;
 
-  if (!user || !formData) return null;
   return (
     <div className="page-container">
       {/* header */}
@@ -162,13 +146,8 @@ const Profile = () => {
 
               <Select
                 label="Fitness goal"
-                value={formData.goal as string}
-                onChange={(v) =>
-                  setFormData({
-                    ...formData,
-                    goal: v as "lose" | "maintain" | "gain",
-                  })
-                }
+                value={formData.goal}
+                onChange={(v) => setFormData({ ...formData, goal: v as Goal })}
                 options={goalOptions}
               />
 

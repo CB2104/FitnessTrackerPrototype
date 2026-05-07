@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useAppContext } from "../context/useAppContext";
-import type { ActivityEntry } from "../types";
 import Card from "../components/ui/Card";
 import { quickActivities } from "../assets/assets";
 import {
@@ -15,49 +14,35 @@ import Button from "../components/ui/Button";
 import toast from "react-hot-toast";
 import api from "../configs/api";
 import { handleError } from "../utils/errors";
+import { filterToday } from "../utils/date";
+
+const INITIAL_FORM_DATA = { name: "", duration: 0, calories: 0 };
 
 const ActivityLog = () => {
   const { allActivityLogs, addActivityLog, removeActivityLog } =
     useAppContext();
-
-  const [activities, setActivities] = useState<ActivityEntry[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    duration: 0,
-    calories: 0,
-  });
-  const [error, setError] = useState("");
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
-  const today = new Date().toISOString().split("T")[0];
+  const activities = filterToday(allActivityLogs);
 
-  const loadActivities = () => {
-    const todaysActivities = allActivityLogs.filter(
-      (a: ActivityEntry) => a.createdAt?.split("T")[0] === today,
-    );
-    setActivities(todaysActivities);
+  const validateForm = (data: typeof formData): string | null => {
+    if (!data.name.trim()) return "Activity name is required";
+    if (data.duration <= 0) return "Duration must be greater than 0";
+    if (data.calories <= 0) return "Calories must be greater than 0";
+    return null;
   };
-
-  useEffect(() => {
-    (() => {
-      loadActivities();
-    })();
-  }, [allActivityLogs]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || formData.duration <= 0) {
-      return toast("Please enter valid data");
-    }
+    const error = validateForm(formData);
+    if (error) return toast.error(error);
+
     try {
       const { data } = await api.post("/api/activity-logs", { data: formData });
 
       addActivityLog(data);
-      setFormData({
-        name: "",
-        duration: 0,
-        calories: 0,
-      });
+      setFormData(INITIAL_FORM_DATA);
       setShowForm(false);
     } catch (error) {
       handleError(error);
@@ -73,7 +58,7 @@ const ActivityLog = () => {
     setShowForm(true);
   };
 
-  const handleDurationChange = (val: string | number) => {
+  const handleDurationChange = (val: string) => {
     const duration = Number(val);
     const activity = quickActivities.find((a) => a.name === formData.name);
 
@@ -97,10 +82,7 @@ const ActivityLog = () => {
     }
   };
 
-  const totalMinutes: number = activities.reduce(
-    (sum, a) => sum + a.duration,
-    0,
-  );
+  const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0);
 
   return (
     <div className="page-container">
@@ -122,7 +104,6 @@ const ActivityLog = () => {
             <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
               {totalMinutes} min
             </p>
-            <p></p>
           </div>
         </div>
       </div>
@@ -133,7 +114,7 @@ const ActivityLog = () => {
           <div className="space-y-4">
             <Card>
               <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-3">
-                Quizz add
+                Quick Add
               </h3>
               <div className="flex flex-wrap gap-2">
                 {quickActivities.map((activity) => (
@@ -166,9 +147,7 @@ const ActivityLog = () => {
                 placeholder="e.g., Morning run"
                 required
                 value={formData.name}
-                onChange={(v) =>
-                  setFormData({ ...formData, name: v.toString() })
-                }
+                onChange={(v) => setFormData({ ...formData, name: v })}
               />
 
               <div className="flex gap-4">
@@ -197,7 +176,6 @@ const ActivityLog = () => {
                   }
                 />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <div className="flex gap-3 pt-2">
                 <Button
@@ -205,8 +183,7 @@ const ActivityLog = () => {
                   variant="secondary"
                   onClick={() => {
                     setShowForm(false);
-                    setError("");
-                    setFormData({ name: "", duration: 0, calories: 0 });
+                    setFormData(INITIAL_FORM_DATA);
                   }}
                 >
                   Cancel
@@ -229,7 +206,7 @@ const ActivityLog = () => {
             <h3 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">
               No activities logged today
             </h3>
-            <p className="text-slate-500 dark:*:text-slate-400 text-sm">
+            <p className="text-slate-500 dark:text-slate-400 text-sm">
               Start moving and track your progress
             </p>
           </Card>
@@ -240,7 +217,7 @@ const ActivityLog = () => {
                 <ActivityIcon className="size-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold to-slate-800 dark:text-white">
+                <h3 className="font-semibold text-slate-800 dark:text-white">
                   Today's Activities
                 </h3>
                 <p className="text-sm text-slate-400">
@@ -279,7 +256,7 @@ const ActivityLog = () => {
                     </div>
                     <button
                       onClick={() => handleDelete(activity.documentId)}
-                      className="p-2 text-red-400 hover:text-red-600 hover:bg-amber-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     >
                       <Trash2Icon className="w-4 h-4" />
                     </button>

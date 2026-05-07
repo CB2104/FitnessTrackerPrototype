@@ -13,25 +13,27 @@ import { Toaster } from "react-hot-toast";
 const App = () => {
   const { user, isUserFetched, onboardingCompleted } = useAppContext();
 
-  if (!user) {
-    return isUserFetched ? <Login /> : <Loading/>;
-  }
-  
-  if(!onboardingCompleted){
-    return <Onboarding/>
-  }
-
   return (
     <>
-    <Toaster/>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="food" element={<FoodLog />} />
-          <Route path="activity" element={<ActivityLog />} />
-          <Route path="profile" element={<Profile />} />
-        </Route>
-      </Routes>
+      <Toaster />
+      {!user ? (
+        isUserFetched ? (
+          <Login />
+        ) : (
+          <Loading />
+        )
+      ) : !onboardingCompleted ? (
+        <Onboarding />
+      ) : (
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="food" element={<FoodLog />} />
+            <Route path="activity" element={<ActivityLog />} />
+            <Route path="profile" element={<Profile />} />
+          </Route>
+        </Routes>
+      )}
     </>
   );
 };
