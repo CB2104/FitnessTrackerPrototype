@@ -4,7 +4,11 @@ export default {
       method: "POST",
       path: "/image-analysis",
       handler: "image-analysis.analyze",
-      config: { auth: false },
+      config: {
+        auth: {
+          scope: ["api::image-analysis.image-analysis.analyze"],
+        },
+      },
     },
   ],
 };

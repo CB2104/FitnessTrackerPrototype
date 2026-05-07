@@ -5,6 +5,8 @@ import fs from "fs";
 export default {
   async analyze(ctx: Context) {
     try {
+      if (!ctx.state.user) return ctx.unauthorized("Login required");
+
       const files = ctx.request.files;
 
       if (!files) {
@@ -36,7 +38,7 @@ export default {
       }
 
       const result = await analyzeImage(filePath);
-      return { data: result };
+      return result;
     } catch (error: any) {
       console.error("=== CONTROLLER ERROR ===");
       console.error("Type:", error.constructor.name);

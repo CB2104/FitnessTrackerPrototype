@@ -107,8 +107,7 @@ const FoodLog = () => {
 
     try {
       const { data } = await api.post("/api/image-analysis", imageFormData);
-      // TODO: normalize image-analysis response shape on backend (sometimes wrapped, sometimes raw)
-      const result = data.data || data;
+      const result = data;
 
       if (!result || !result.name || !result.calories) {
         return toast.error("Invalid response from AI");
