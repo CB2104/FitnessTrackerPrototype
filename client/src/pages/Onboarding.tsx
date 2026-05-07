@@ -50,7 +50,10 @@ const Onboarding = () => {
     return null;
   };
 
-  const updateField = (field: keyof ProfileFormData, value: string) => {
+  const updateField = (
+    field: keyof ProfileFormData,
+    value: string | number,
+  ) => {
     const numericFields: (keyof ProfileFormData)[] = [
       "age",
       "weight",
